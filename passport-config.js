@@ -28,15 +28,11 @@ function initialize(passport, user, email, password) {
   passport.deserializeUser(async (id, done) => {
 
     const db = await connectToDb();
-    console.log(id);
-
-    console.log("test");
     try {
-      var str1 = "ObjectId(\"" + id + "\")";
+      //var str1 = "ObjectId(\"" + id + "\")";
       var str = new ObjectId(id);
-      console.log(str);
       const user = await db.users.findOne({ _id: str });
-      console.log(user)
+      //console.log(user)
       return done(null, user);
     } catch (e) {
       return done(e);

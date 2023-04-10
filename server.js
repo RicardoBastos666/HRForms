@@ -10,6 +10,18 @@ const flash = require('express-flash');
 const session = require('express-session');
 const methodOverride = require('method-override');
 
+app.set('view-engine', 'ejs');
+app.use(express.urlencoded({ extended: false }));
+app.use(flash());
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(methodOverride('_method'));
+
 const { connectToDb } = require('./db'); // import the connectToDb function from db.js
 
 const usersPromise = connectToDb(); // create a promise for the users collection
@@ -28,18 +40,6 @@ initializePassport(
     return user;
   }
 );
-
-app.set('view-engine', 'ejs');
-app.use(express.urlencoded({ extended: false }));
-app.use(flash());
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false
-}));
-app.use(passport.initialize());
-app.use(passport.session());
-app.use(methodOverride('_method'));
 
 app.get('/', checkAuthenticated, (req, res) => {
   res.render('index.ejs', { name: req.user.name }); // render index page with user name
@@ -60,22 +60,28 @@ app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
 }));
 
 app.get('/register', checkNotAuthenticated, (req, res) => {
-  res.render('register.ejs');
+  res.render('register.ejs', {errorMessage: null});
 });
 
 app.post('/register', checkNotAuthenticated, async (req, res) => {
+  const { name, email, password, password2 } = req.body;
+
+  if (password !== password2) {
+    return res.status(400).render('register', { errorMessage: 'Passwords do not match' });
+  }
+
   try {
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const users = await usersPromise; // resolve the usersPromise
     const user = {
-      name: req.body.name,
-      email: req.body.email,
+      name: name,
+      email: email,
       password: hashedPassword
     };
     
     try {
-      const result = users.users.insertOne(user);/*await users.insertOne(user);*/ // insert new user into the users collection
-      console.log(`User with _id: ${result.insertedId} inserted into collection`);
+      const result = await users.users.insertOne(user); // insert new user into the users collection
+      console.log(`User with id: ${result.insertedId, result.name} inserted into collection`);
       res.redirect('/login');
     } catch (err) {
       console.error(err);
@@ -87,6 +93,14 @@ app.post('/register', checkNotAuthenticated, async (req, res) => {
   }
 });
 
+app.delete('/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      console.log(err);
+    }
+    res.redirect('/login');
+  });
+});
 
 function checkAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
