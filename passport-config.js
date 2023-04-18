@@ -3,39 +3,41 @@ const bcrypt = require('bcrypt');
 const { connectToDb } = require('./db');
 const ObjectId = require('mongodb').ObjectId;
 
-function initialize(passport, user, email, password) {
-  const authenticateUser = async (email, password, done) => {
-    const { db, users } = await connectToDb();
-    const user = await users.findOne({ email: email });
-    console.log(email);
-    if (user == null) {
+async function authenticateUser(email, password, done) {
+  try {
+    const { db, client } = await connectToDb();
+    const users = db.collection('users');
+    const user = await users.findOne({ email });
+
+    if (!user) {
       return done(null, false, { message: 'No user with that email' });
     }
 
-    try {
-      if (await bcrypt.compare(password, user.password)) {
-        return done(null, user, email, password);
-      } else {
-        return done(null, false, { message: 'Password incorrect' });
-      }
-    } catch (e) {
-      return done(e);
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (passwordMatch) {
+      return done(null, { ...user, email, password });
+    } else {
+      return done(null, false, { message: 'Password incorrect' });
     }
-  };
+  } catch (error) {
+    done(error);
+  }
+}
 
+function initialize(passport) {
   passport.use(new LocalStrategy({ usernameField: 'email' }, authenticateUser));
+  
   passport.serializeUser((user, done) => done(null, user._id));
+  
   passport.deserializeUser(async (id, done) => {
-
-    const db = await connectToDb();
     try {
-      //var str1 = "ObjectId(\"" + id + "\")";
-      var str = new ObjectId(id);
-      const user = await db.users.findOne({ _id: str });
-      //console.log(user)
-      return done(null, user);
-    } catch (e) {
-      return done(e);
+      const { db, client } = await connectToDb();
+      const users = db.collection('users');
+      const user = await users.findOne({ _id: new ObjectId(id) });
+      done(null, user);
+    } catch (error) {
+      done(error);
     }
   });
 }
