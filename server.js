@@ -9,10 +9,16 @@ const flash = require('express-flash');
 const session = require('express-session');
 const passport = require('passport');
 
+// Set the view engine to ejs
+app.set('view engine', 'ejs');
+
+// Set the views directory to your views folder
+app.set('views', __dirname + '/views');
+
 require('dotenv').config();
 
-const authRoutes = require('./routes/auth');
-const formRoutes = require('./routes/forms');
+const authRoutes = require('./routes/auth.js');
+const formRoutes = require('./routes/forms.js');
 
 require('./passport-config')(passport);
 
@@ -31,6 +37,18 @@ app.use(passport.session());
 // Register routes
 app.use('/', authRoutes);
 app.use('/form', formRoutes);
+
+app.get('/login', (req, res) => {
+  res.render('login');
+});
+
+app.get('/register', (req, res) => {
+  res.render('register');
+});
+
+app.get('/form', (req, res) => {
+  res.render('form');
+});
 
 // Catch-all for unknown routes
 app.use((req, res) => {
