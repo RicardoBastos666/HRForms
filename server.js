@@ -8,6 +8,7 @@ const bodyParser = require('body-parser');
 const flash = require('express-flash');
 const session = require('express-session');
 const passport = require('passport');
+const passportConfig = require('./passport-config')(db);
 
 // Set the view engine to ejs
 app.set('view engine', 'ejs');
@@ -49,6 +50,15 @@ app.get('/register', (req, res) => {
 app.get('/form', (req, res) => {
   res.render('form');
 });
+
+app.get('/', (req, res) => {
+  res.render('index');
+});
+
+app.get('/backoffice', (req, res) => {
+  res.render('backoffice');
+});
+
 
 // Catch-all for unknown routes
 app.use((req, res) => {

@@ -14,6 +14,10 @@ async function getUserByEmail(email) {
 
 const usersPromise = connectToDb(); // create a promise for the users collection
 
+router.get('/', checkAuthenticated, (req, res) => {
+  res.render('index.ejs', { name: req.user.name })
+});
+
 router.post('/login', checkNotAuthenticated, passport.authenticate('local', {
   successRedirect: '/',
   failureRedirect: '/login',
@@ -55,6 +59,14 @@ router.post('/register', checkNotAuthenticated, async (req, res) => {
     res.redirect('/register');
   }
 });
+
+function checkAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next()
+  }
+
+  res.redirect('/login')
+}
 
 function checkNotAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
